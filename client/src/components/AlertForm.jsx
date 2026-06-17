@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Bell, Link, MapPin } from 'lucide-react';
-import { LOCATIONS } from '../services/mockAPI';
+import { LOCATIONS } from '../services/api';
 
 const TRIGGERS = [
   { key: 'rain',         label: 'Rain',         icon: '🌧️' },

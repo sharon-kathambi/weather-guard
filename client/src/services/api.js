@@ -30,3 +30,8 @@ export const webhooksAPI = {
   remove: (id) => api.delete(`/webhooks/${id}`).then(r => r.data),
   checkAll: () => api.post('/webhooks/check').then(r => r.data),
 };
+
+export const geocodeAPI = {
+  search: (q) =>
+    api.get('/geocode', { params: { q } }).then(r => r.data.results),
+};

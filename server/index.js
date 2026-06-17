@@ -7,6 +7,7 @@ const morgan  = require('morgan');
 const weatherRoutes  = require('./API/Weather');
 const insightsRoutes = require('./API/Insights');
 const webhookRoutes  = require('./API/WebHooks');
+const geocodeRoutes  = require('./API/Geocode');
 const { errorHandler } = require('./middleware/errorHandler');
 const { rateLimiter }  = require('./middleware/rateLimiter');
 
@@ -24,6 +25,7 @@ app.use(rateLimiter);
 app.use('/api/weather',  weatherRoutes);
 app.use('/api/insights', insightsRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/geocode',  geocodeRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -39,6 +41,7 @@ app.get('/api/health', (req, res) => {
       'GET  /api/weather?lat=&lon=&timezone=',
       'GET  /api/weather/hourly?lat=&lon=',
       'GET  /api/insights?lat=&lon=&location=&timezone=',
+      'GET  /api/geocode?q=',
       'POST /api/webhooks',
       'GET  /api/webhooks',
       'DELETE /api/webhooks/:id',
