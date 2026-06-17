@@ -36,7 +36,7 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0',
     sources: {
       weather: 'Open-Meteo — free, no key required',
-      ai:      'Google Gemini 1.5 Flash',
+      ai:      'Google Gemini 2.5 Flash',
     },
     endpoints: [
       'GET  /api/weather?lat=&lon=&timezone=',
