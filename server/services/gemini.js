@@ -1,29 +1,25 @@
 const axios = require('axios');
+const { withRetry } = require('../utils/retry');
 
 const gemini = axios.create({
   baseURL: 'https://generativelanguage.googleapis.com/v1beta',
-  timeout: 20000,
+  timeout: 30000,
 });
 
-// Simple in-memory cache — keyed by "lat,lon,date"
-// Prevents repeat Gemini calls for the same location on the same day
+// Cache advisories for the full day — keyed by lat/lon/date
 const cache = new Map();
 
 function getCacheKey(lat, lon) {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = new Date().toISOString().slice(0, 10);
   return `${parseFloat(lat).toFixed(2)},${parseFloat(lon).toFixed(2)},${today}`;
 }
 
-/**
- * Generate an agricultural AI advisory from forecast data
- */
 async function getAgriInsight(forecastData, location = '') {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
   const { current, daily, location: loc } = forecastData;
 
-  // Return cached response if we already called Gemini for this location today
   const cacheKey = getCacheKey(loc.lat, loc.lon);
   if (cache.has(cacheKey)) {
     console.log(`[Gemini] Cache hit for ${location || cacheKey}`);
@@ -50,32 +46,28 @@ ${next3Days.map(d => `- ${d.date}: ${d.condition}, ${d.temp_min}–${d.temp_max}
 
 Be direct and practical. Write for a farmer, not a meteorologist.`;
 
-  const { data } = await gemini.post(
-    `/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-    {
+  // Retry up to 3 times with 2s base delay — handles Gemini's per-minute quota bursts
+  const { data } = await withRetry(
+    () => gemini.post(`/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.4, maxOutputTokens: 300 },
-    }
+    }),
+    3,   // retries
+    2000 // 2s base delay (becomes 2s, 4s, 6s)
   );
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('No response from Gemini');
 
   const summary = text.trim();
-
-  // Cache it for the rest of the day
   cache.set(cacheKey, summary);
-  console.log(`[Gemini] Advisory generated and cached for ${location || cacheKey}`);
-
+  console.log(`[Gemini] Advisory cached for ${location || cacheKey}`);
   return summary;
 }
 
-/**
- * Generate an alert message for a triggered weather event
- */
 async function getAlertMessage(trigger, forecastData, location = '') {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return `Weather alert: ${trigger} conditions detected${location ? ` in ${location}` : ''}.`;
+  if (!apiKey) return `Weather alert: ${trigger} detected${location ? ` in ${location}` : ''}.`;
 
   const prompt = `Write a brief, urgent SMS-style weather alert (max 2 sentences) for a farmer.
 Trigger: ${trigger}
@@ -83,12 +75,19 @@ Location: ${location || 'East Africa'}
 Current: ${forecastData.current.condition}, ${forecastData.current.temp_c}°C, ${forecastData.current.precipitation_mm}mm rain
 Be specific and actionable.`;
 
-  const { data } = await gemini.post(
-    `/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-    { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 100 } }
-  );
-
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || `Weather alert: ${trigger} detected.`;
+  try {
+    const { data } = await withRetry(
+      () => gemini.post(`/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 100 },
+      }),
+      3,
+      2000
+    );
+    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || `Weather alert: ${trigger} detected.`;
+  } catch {
+    return `Weather alert: ${trigger} conditions detected${location ? ` in ${location}` : ''}. Please take necessary precautions.`;
+  }
 }
 
 module.exports = { getAgriInsight, getAlertMessage };
