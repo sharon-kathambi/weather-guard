@@ -12,6 +12,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { rateLimiter }  = require('./middleware/rateLimiter');
 
 const app  = express();
+app.set('trust proxy', 1); // Trust Render's proxy
 const PORT = process.env.PORT || 3001;
 
 
