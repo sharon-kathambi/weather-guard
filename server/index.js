@@ -9,7 +9,7 @@ const insightsRoutes = require('./API/Insights');
 const webhookRoutes  = require('./API/WebHooks');
 const geocodeRoutes  = require('./API/Geocode');
 const { errorHandler } = require('./middleware/errorHandler');
-const { rateLimiter }  = require('./middleware/rateLimiter');
+//const { rateLimiter }  = require('./middleware/rateLimiter');
 
 const app  = express();
 app.set('trust proxy', 1); // Trust Render's proxy
@@ -20,7 +20,7 @@ app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(rateLimiter);
+//app.use(rateLimiter);
 
 //Routes
 app.use('/api/weather',  weatherRoutes);
