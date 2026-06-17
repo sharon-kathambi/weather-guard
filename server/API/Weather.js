@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getForecast, getHourly } = require('../services/openMeteo');
+const { getForecast, getHourly } = require('../services/Openmeteo');
 const { requireLatLon } = require('../middleware/validate');
 
 /**
