@@ -4,9 +4,9 @@ const cors    = require('cors');
 const helmet  = require('helmet');
 const morgan  = require('morgan');
 
-const weatherRoutes  = require('./routes/weather');
-const insightsRoutes = require('./routes/insights');
-const webhookRoutes  = require('./routes/webhooks');
+const weatherRoutes  = require('./API/Weather');
+const insightsRoutes = require('./API/Insights');
+const webhookRoutes  = require('./API/WebHooks');
 const { errorHandler } = require('./middleware/errorHandler');
 const { rateLimiter }  = require('./middleware/rateLimiter');
 
