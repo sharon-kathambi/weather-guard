@@ -12,7 +12,6 @@ export default function Alerts() {
       const data = await webhooksAPI.list();
       setWebhooks(data.webhooks ?? []);
     } catch {
-      // Non-fatal — list stays empty
     }
   };
 
