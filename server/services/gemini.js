@@ -5,6 +5,15 @@ const gemini = axios.create({
   timeout: 20000,
 });
 
+// Simple in-memory cache — keyed by "lat,lon,date"
+// Prevents repeat Gemini calls for the same location on the same day
+const cache = new Map();
+
+function getCacheKey(lat, lon) {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  return `${parseFloat(lat).toFixed(2)},${parseFloat(lon).toFixed(2)},${today}`;
+}
+
 /**
  * Generate an agricultural AI advisory from forecast data
  */
@@ -12,7 +21,15 @@ async function getAgriInsight(forecastData, location = '') {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
-  const { current, daily } = forecastData;
+  const { current, daily, location: loc } = forecastData;
+
+  // Return cached response if we already called Gemini for this location today
+  const cacheKey = getCacheKey(loc.lat, loc.lon);
+  if (cache.has(cacheKey)) {
+    console.log(`[Gemini] Cache hit for ${location || cacheKey}`);
+    return cache.get(cacheKey);
+  }
+
   const next3Days = daily.slice(0, 3);
 
   const prompt = `You are an agricultural weather advisor for East African farmers.
@@ -34,7 +51,7 @@ ${next3Days.map(d => `- ${d.date}: ${d.condition}, ${d.temp_min}–${d.temp_max}
 Be direct and practical. Write for a farmer, not a meteorologist.`;
 
   const { data } = await gemini.post(
-    `/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
     {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.4, maxOutputTokens: 300 },
@@ -43,7 +60,14 @@ Be direct and practical. Write for a farmer, not a meteorologist.`;
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('No response from Gemini');
-  return text.trim();
+
+  const summary = text.trim();
+
+  // Cache it for the rest of the day
+  cache.set(cacheKey, summary);
+  console.log(`[Gemini] Advisory generated and cached for ${location || cacheKey}`);
+
+  return summary;
 }
 
 /**
@@ -60,7 +84,7 @@ Current: ${forecastData.current.condition}, ${forecastData.current.temp_c}°C, $
 Be specific and actionable.`;
 
   const { data } = await gemini.post(
-    `/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
     { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 100 } }
   );
 

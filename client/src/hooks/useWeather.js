@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { weatherAPI } from '../services/mockAPI'; 
+import { weatherAPI } from '../services/api'; 
 
 export function useWeather() {
   const [weather,         setWeather]         = useState(null);
