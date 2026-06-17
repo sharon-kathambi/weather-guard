@@ -1,0 +1,32 @@
+:root {
+  --bg:         #0D1117;
+  --bg2:        #161B22;
+  --bg3:        #1C2333;
+
+  --blue:       #3B8BD4;
+  --blue-light: #85B7EB;
+  --blue-dim:   #1A3A5C;
+  --blue-glow:  #0C447C;
+
+  --text:       #E6EDF3;
+  --text2:      #8B949E;
+  --text3:      #484F58;
+
+  --border:     #30363D;
+  --border2:    #21262D;
+
+  --amber:      #F0883E;
+  --amber-dim:  #2D1F0A;
+  --red:        #F85149;
+  --red-dim:    #2D0F0F;
+  --green:      #3FB950;
+  --green-dim:  #0D2818;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
