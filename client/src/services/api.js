@@ -1,17 +1,35 @@
 import axios from 'axios';
 
+// Server — only Gemini insights and webhooks
 const server = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
+// Open-Meteo — called directly from browser
 const openMeteo = axios.create({
   baseURL: 'https://api.open-meteo.com/v1',
 });
 
+// Open-Meteo Geocoding — called directly from browser
 const geocoding = axios.create({
   baseURL: 'https://geocoding-api.open-meteo.com/v1',
 });
 
+// ─── Simple client-side cache — 30 minutes ────────────────────────────────────
+const cache = new Map();
+const CACHE_TTL = 30 * 60 * 1000;
+
+function getCached(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) { cache.delete(key); return null; }
+  return entry.data;
+}
+function setCache(key, data) {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+// ─── WMO weather codes ────────────────────────────────────────────────────────
 const WMO_CODES = {
   0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
   45: 'Foggy', 48: 'Icy fog',
@@ -22,7 +40,7 @@ const WMO_CODES = {
 };
 const getCondition = (code) => WMO_CODES[code] || 'Unknown';
 
-// Locations 
+// ─── Locations ────────────────────────────────────────────────────────────────
 export const LOCATIONS = [
   { label: 'Nairobi',       lat: -1.2921, lon:  36.8219, timezone: 'Africa/Nairobi'       },
   { label: 'Kisumu',        lat: -0.0917, lon:  34.7679, timezone: 'Africa/Nairobi'       },
@@ -33,14 +51,16 @@ export const LOCATIONS = [
   { label: 'Addis Ababa',   lat:  9.0320, lon:  38.7469, timezone: 'Africa/Addis_Ababa'   },
 ];
 
-// Weather API — hits Open-Meteo directly from browser 
+// ─── Weather API ──────────────────────────────────────────────────────────────
 export const weatherAPI = {
   getForecast: async (lat, lon, timezone = 'Africa/Nairobi') => {
+    const key = `forecast:${parseFloat(lat).toFixed(2)},${parseFloat(lon).toFixed(2)}`;
+    const cached = getCached(key);
+    if (cached) return cached;
+
     const { data } = await openMeteo.get('/forecast', {
       params: {
-        latitude:  lat,
-        longitude: lon,
-        timezone,
+        latitude: lat, longitude: lon, timezone,
         current: [
           'temperature_2m', 'relative_humidity_2m', 'apparent_temperature',
           'weather_code', 'wind_speed_10m', 'wind_direction_10m', 'precipitation',
@@ -54,7 +74,7 @@ export const weatherAPI = {
       },
     });
 
-    return {
+    const result = {
       location: { lat: parseFloat(lat), lon: parseFloat(lon), timezone: data.timezone },
       current: {
         temp_c:           data.current.temperature_2m,
@@ -79,14 +99,19 @@ export const weatherAPI = {
         sunset:                    data.daily.sunset[i],
       })),
     };
+
+    setCache(key, result);
+    return result;
   },
 
   getHourly: async (lat, lon, timezone = 'Africa/Nairobi') => {
+    const key = `hourly:${parseFloat(lat).toFixed(2)},${parseFloat(lon).toFixed(2)}`;
+    const cached = getCached(key);
+    if (cached) return cached;
+
     const { data } = await openMeteo.get('/forecast', {
       params: {
-        latitude:  lat,
-        longitude: lon,
-        timezone,
+        latitude: lat, longitude: lon, timezone,
         hourly: [
           'temperature_2m', 'relative_humidity_2m', 'precipitation_probability',
           'precipitation', 'weather_code', 'wind_speed_10m',
@@ -95,7 +120,7 @@ export const weatherAPI = {
       },
     });
 
-    return {
+    const result = {
       location: { lat: parseFloat(lat), lon: parseFloat(lon) },
       hourly: data.hourly.time.map((time, i) => ({
         time,
@@ -107,21 +132,29 @@ export const weatherAPI = {
         wind_kph:                  data.hourly.wind_speed_10m[i],
       })),
     };
+
+    setCache(key, result);
+    return result;
   },
 
-  
-  getInsights: (lat, lon, location = '', timezone = 'Africa/Nairobi') =>
-    server.get('/insights', { params: { lat, lon, location, timezone } }).then(r => r.data),
+  // Insights go through server (Gemini key stays secret)
+  getInsights: (forecast, location = '') =>
+    server.post('/insights', { forecast, location }).then(r => r.data),
 };
 
-// Geocoding
+// ─── Geocoding ────────────────────────────────────────────────────────────────
 export const geocodeAPI = {
   search: async (q) => {
     if (!q || q.trim().length < 2) return [];
+    const key = `geo:${q.trim().toLowerCase()}`;
+    const cached = getCached(key);
+    if (cached) return cached;
+
     const { data } = await geocoding.get('/search', {
       params: { name: q.trim(), count: 6, language: 'en', format: 'json' },
     });
-    return (data.results || []).map(r => ({
+
+    const results = (data.results || []).map(r => ({
       label:    r.name,
       country:  r.country,
       region:   r.admin1 || '',
@@ -129,53 +162,16 @@ export const geocodeAPI = {
       lon:      r.longitude,
       timezone: r.timezone || 'UTC',
     }));
+
+    setCache(key, results);
+    return results;
   },
 };
 
-// Webhooks
+// ─── Webhooks ─────────────────────────────────────────────────────────────────
 export const webhooksAPI = {
   create:   (payload) => server.post('/webhooks', payload).then(r => r.data),
   list:     ()        => server.get('/webhooks').then(r => r.data),
   remove:   (id)      => server.delete(`/webhooks/${id}`).then(r => r.data),
   checkAll: ()        => server.post('/webhooks/check').then(r => r.data),
 };
-
-/*import axios from 'axios';
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-});
-
-// Named locations with timezones for East Africa
-export const LOCATIONS = [
-  { label: 'Nairobi', lat: -1.2921, lon: 36.8219, timezone: 'Africa/Nairobi' },
-  { label: 'Kisumu', lat: -0.0917, lon: 34.7679, timezone: 'Africa/Nairobi' },
-  { label: 'Mombasa', lat: -4.0435, lon: 39.6682, timezone: 'Africa/Nairobi' },
-  { label: 'Kampala', lat: 0.3476, lon: 32.5825, timezone: 'Africa/Kampala' },
-  { label: 'Dar es Salaam', lat: -6.7924, lon: 39.2083, timezone: 'Africa/Dar_es_Salaam' },
-  { label: 'Kigali', lat: -1.9441, lon: 30.0619, timezone: 'Africa/Kigali' },
-  { label: 'Addis Ababa', lat: 9.0320, lon: 38.7469, timezone: 'Africa/Addis_Ababa' },
-];
-
-export const weatherAPI = {
-  getForecast: (lat, lon, timezone = 'Africa/Nairobi') =>
-    api.get('/weather', { params: { lat, lon, timezone } }).then(r => r.data),
-
-  getHourly: (lat, lon, timezone = 'Africa/Nairobi') =>
-    api.get('/weather/hourly', { params: { lat, lon, timezone } }).then(r => r.data),
-
-  getInsights: (lat, lon, location = '', timezone = 'Africa/Nairobi') =>
-    api.get('/insights', { params: { lat, lon, location, timezone } }).then(r => r.data),
-};
-
-export const webhooksAPI = {
-  create: (payload) => api.post('/webhooks', payload).then(r => r.data),
-  list: () => api.get('/webhooks').then(r => r.data),
-  remove: (id) => api.delete(`/webhooks/${id}`).then(r => r.data),
-  checkAll: () => api.post('/webhooks/check').then(r => r.data),
-};
-
-export const geocodeAPI = {
-  search: (q) =>
-    api.get('/geocode', { params: { q } }).then(r => r.data.results),
-};*/

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { weatherAPI } from '../services/api'; 
+import { weatherAPI } from '../services/api';
 
 export function useWeather() {
   const [weather,         setWeather]         = useState(null);
@@ -13,22 +13,26 @@ export function useWeather() {
     setError(null);
     setInsights(null);
 
+    // Step 1 — fetch forecast directly from Open-Meteo (browser → Open-Meteo)
+    let forecast = null;
     try {
-      const data = await weatherAPI.getForecast(loc.lat, loc.lon, loc.timezone);
-      setWeather(data);
+      forecast = await weatherAPI.getForecast(loc.lat, loc.lon, loc.timezone);
+      setWeather(forecast);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to fetch weather data.');
+      setError('Failed to fetch weather data.');
       setLoading(false);
       return;
     } finally {
       setLoading(false);
     }
 
+    // Step 2 — send forecast to server, server calls Gemini only (no Open-Meteo on server)
     setLoadingInsights(true);
     try {
-      const data = await weatherAPI.getInsights(loc.lat, loc.lon, loc.label, loc.timezone);
+      const data = await weatherAPI.getInsights(forecast, loc.label);
       setInsights(data);
     } catch {
+      setInsights({ summary: null, advisory_unavailable: true });
     } finally {
       setLoadingInsights(false);
     }
