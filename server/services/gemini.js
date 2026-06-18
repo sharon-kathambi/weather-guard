@@ -6,7 +6,7 @@ const gemini = axios.create({
   timeout: 30000,
 });
 
-// Cache advisories for the full day — keyed by lat/lon/date
+// Cache advisories for the full day
 const cache = new Map();
 
 function getCacheKey(lat, lon) {
@@ -28,32 +28,20 @@ async function getAgriInsight(forecastData, location = '') {
 
   const next3Days = daily.slice(0, 3);
 
-  const prompt = `You are an agricultural weather advisor for East African farmers.
-Given the following weather forecast${location ? ` for ${location}` : ''}, provide a concise, practical advisory (3-4 sentences) covering:
-1. Current conditions and what they mean for farming activity today
-2. Key weather risks or opportunities in the next 3 days
-3. One specific planting, irrigation, or harvesting recommendation
+  const prompt = `Agricultural weather advisory for ${location || 'East Africa'}.
 
-Current conditions:
-- Temperature: ${current.temp_c}°C (feels like ${current.feels_like_c}°C)
-- Humidity: ${current.humidity}%
-- Wind: ${current.wind_kph} km/h
-- Condition: ${current.condition}
-- Precipitation today: ${current.precipitation_mm}mm
+Current: ${current.condition}, ${current.temp_c}°C, humidity ${current.humidity}%, wind ${current.wind_kph}km/h, rain today ${current.precipitation_mm}mm.
+Next 3 days: ${next3Days.map(d => `${d.date}: ${d.condition}, high ${d.temp_max}°C, ${d.precipitation_probability}% rain chance`).join(' | ')}
 
-Next 3 days:
-${next3Days.map(d => `- ${d.date}: ${d.condition}, ${d.temp_min}–${d.temp_max}°C, ${d.precipitation_mm}mm rain, ${d.precipitation_probability}% rain chance`).join('\n')}
+Write exactly 3 complete sentences in English for a farmer covering: today conditions, upcoming risks, one specific action. Every sentence must be fully completed.`;
 
-Be direct and practical. Write for a farmer, not a meteorologist.`;
-
-  // Retry up to 3 times with 2s base delay — handles Gemini's per-minute quota bursts
   const { data } = await withRetry(
     () => gemini.post(`/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 300 },
+      generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
     }),
-    3,   // retries
-    2000 // 2s base delay (becomes 2s, 4s, 6s)
+    3,
+    2000
   );
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -69,17 +57,13 @@ async function getAlertMessage(trigger, forecastData, location = '') {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return `Weather alert: ${trigger} detected${location ? ` in ${location}` : ''}.`;
 
-  const prompt = `Write a brief, urgent SMS-style weather alert (max 2 sentences) for a farmer.
-Trigger: ${trigger}
-Location: ${location || 'East Africa'}
-Current: ${forecastData.current.condition}, ${forecastData.current.temp_c}°C, ${forecastData.current.precipitation_mm}mm rain
-Be specific and actionable.`;
+  const prompt = `Write a 2-sentence SMS weather alert for a farmer. Trigger: ${trigger}. Location: ${location || 'East Africa'}. Current: ${forecastData.current.condition}, ${forecastData.current.temp_c}°C. Be specific and actionable.`;
 
   try {
     const { data } = await withRetry(
       () => gemini.post(`/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 100 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 150 },
       }),
       3,
       2000

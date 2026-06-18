@@ -6,7 +6,6 @@ import {
   mockLocations,
 } from './mockData';
 
-// Simulates network delay so loading states are visible
 const delay = (ms = 800) => new Promise(res => setTimeout(res, ms));
 
 export const LOCATIONS = mockLocations;
@@ -23,7 +22,7 @@ export const weatherAPI = {
   },
 
   getInsights: async (lat, lon, location) => {
-    await delay(1400); // slightly slower — mimics Gemini latency
+    await delay(1400); 
     return { ...mockInsights, location: { lat, lon } };
   },
 };

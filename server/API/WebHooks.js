@@ -4,7 +4,6 @@ const { getForecast }     = require('../services/Openmeteo');
 const { getAlertMessage } = require('../services/gemini');
 const { requireBodyFields } = require('../middleware/validate');
 
-// In-memory store — swap for Redis or Postgres in production
 const subscriptions = new Map();
 let idCounter = 1;
 
@@ -70,7 +69,6 @@ router.post('/check', async (req, res) => {
       const forecast  = await getForecast(sub.lat, sub.lon, sub.timezone);
       const { current, daily } = forecast;
 
-      // Evaluate which triggers fired
       const fired = sub.triggers.filter(trigger => {
         const rule = TRIGGER_RULES[trigger];
         return rule ? rule(current, daily) : false;

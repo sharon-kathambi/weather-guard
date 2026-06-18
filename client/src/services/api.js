@@ -1,21 +1,17 @@
 import axios from 'axios';
 
-// Server — only Gemini insights and webhooks
 const server = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
-// Open-Meteo — called directly from browser
 const openMeteo = axios.create({
   baseURL: 'https://api.open-meteo.com/v1',
 });
 
-// Open-Meteo Geocoding — called directly from browser
 const geocoding = axios.create({
   baseURL: 'https://geocoding-api.open-meteo.com/v1',
 });
 
-// ─── Simple client-side cache — 30 minutes ────────────────────────────────────
 const cache = new Map();
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -29,7 +25,6 @@ function setCache(key, data) {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
-// ─── WMO weather codes ────────────────────────────────────────────────────────
 const WMO_CODES = {
   0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
   45: 'Foggy', 48: 'Icy fog',
@@ -40,7 +35,6 @@ const WMO_CODES = {
 };
 const getCondition = (code) => WMO_CODES[code] || 'Unknown';
 
-// ─── Locations ────────────────────────────────────────────────────────────────
 export const LOCATIONS = [
   { label: 'Nairobi',       lat: -1.2921, lon:  36.8219, timezone: 'Africa/Nairobi'       },
   { label: 'Kisumu',        lat: -0.0917, lon:  34.7679, timezone: 'Africa/Nairobi'       },
@@ -51,7 +45,6 @@ export const LOCATIONS = [
   { label: 'Addis Ababa',   lat:  9.0320, lon:  38.7469, timezone: 'Africa/Addis_Ababa'   },
 ];
 
-// ─── Weather API ──────────────────────────────────────────────────────────────
 export const weatherAPI = {
   getForecast: async (lat, lon, timezone = 'Africa/Nairobi') => {
     const key = `forecast:${parseFloat(lat).toFixed(2)},${parseFloat(lon).toFixed(2)}`;
@@ -137,12 +130,10 @@ export const weatherAPI = {
     return result;
   },
 
-  // Insights go through server (Gemini key stays secret)
   getInsights: (forecast, location = '') =>
     server.post('/insights', { forecast, location }).then(r => r.data),
 };
 
-// ─── Geocoding ────────────────────────────────────────────────────────────────
 export const geocodeAPI = {
   search: async (q) => {
     if (!q || q.trim().length < 2) return [];
@@ -168,7 +159,6 @@ export const geocodeAPI = {
   },
 };
 
-// ─── Webhooks ─────────────────────────────────────────────────────────────────
 export const webhooksAPI = {
   create:   (payload) => server.post('/webhooks', payload).then(r => r.data),
   list:     ()        => server.get('/webhooks').then(r => r.data),

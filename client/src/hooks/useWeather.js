@@ -13,7 +13,6 @@ export function useWeather() {
     setError(null);
     setInsights(null);
 
-    // Step 1 — fetch forecast directly from Open-Meteo (browser → Open-Meteo)
     let forecast = null;
     try {
       forecast = await weatherAPI.getForecast(loc.lat, loc.lon, loc.timezone);
@@ -26,7 +25,6 @@ export function useWeather() {
       setLoading(false);
     }
 
-    // Step 2 — send forecast to server, server calls Gemini only (no Open-Meteo on server)
     setLoadingInsights(true);
     try {
       const data = await weatherAPI.getInsights(forecast, loc.label);

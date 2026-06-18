@@ -1,4 +1,4 @@
-// ─── Current weather ──────────────────────────────────────────────────────────
+
 export const mockCurrent = {
   temp_c:            22,
   feels_like_c:      21,
@@ -10,14 +10,12 @@ export const mockCurrent = {
   weather_code:      2,
 };
 
-// ─── Location ─────────────────────────────────────────────────────────────────
 export const mockLocation = {
   lat:      -1.2921,
   lon:       36.8219,
   timezone: 'Africa/Nairobi',
 };
 
-// ─── 7-day forecast ───────────────────────────────────────────────────────────
 export const mockDaily = [
   { date: '2026-06-17', weather_code: 2,  condition: 'Partly cloudy',   temp_max: 24, temp_min: 14, precipitation_mm: 0.2, precipitation_probability: 12, sunrise: '2026-06-17T06:24:00', sunset: '2026-06-17T18:41:00' },
   { date: '2026-06-18', weather_code: 1,  condition: 'Mainly clear',    temp_max: 25, temp_min: 15, precipitation_mm: 0.0, precipitation_probability: 8,  sunrise: '2026-06-18T06:24:00', sunset: '2026-06-18T18:41:00' },
@@ -28,14 +26,12 @@ export const mockDaily = [
   { date: '2026-06-23', weather_code: 0,  condition: 'Clear sky',       temp_max: 26, temp_min: 15, precipitation_mm: 0.0, precipitation_probability: 5,  sunrise: '2026-06-23T06:26:00', sunset: '2026-06-23T18:42:00' },
 ];
 
-// ─── Full weather response (mirrors openMeteo.getForecast shape) ───────────────
 export const mockWeather = {
   location: mockLocation,
   current:  mockCurrent,
   daily:    mockDaily,
 };
 
-// ─── AI advisory ──────────────────────────────────────────────────────────────
 export const mockInsights = {
   location: mockLocation,
   current:  mockCurrent,
@@ -46,7 +42,6 @@ export const mockInsights = {
     'until Sunday when soil drainage improves. Consider harvesting mature crops before Thursday to avoid losses.',
 };
 
-// ─── Webhook subscriptions ────────────────────────────────────────────────────
 export const mockWebhooks = [
   {
     id:        '1',
@@ -68,7 +63,6 @@ export const mockWebhooks = [
   },
 ];
 
-// ─── Fired alerts (result of POST /api/webhooks/check) ────────────────────────
 export const mockFiredAlerts = [
   {
     id:       '1',
@@ -88,7 +82,6 @@ export const mockFiredAlerts = [
   },
 ];
 
-// ─── Locations list (mirrors LOCATIONS in api.js) ─────────────────────────────
 export const mockLocations = [
   { label: 'Nairobi',       lat: -1.2921, lon:  36.8219, timezone: 'Africa/Nairobi'       },
   { label: 'Kisumu',        lat: -0.0917, lon:  34.7679, timezone: 'Africa/Nairobi'       },
