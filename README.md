@@ -149,6 +149,18 @@ const AT = require('africastalking')({ apiKey: process.env.AT_API_KEY, username:
 await AT.SMS.send({ to: [subscriberPhone], message });
 ```
 ---
+##Screenshots
+
+#Dashboard
+<img width="1470" height="796" alt="Screenshot 2026-06-18 at 07 42 37" src="https://github.com/user-attachments/assets/ec7111af-8b4f-4c0a-ba88-e38866105281" />
+
+#Search
+<img width="1470" height="796" alt="Screenshot 2026-06-18 at 07 43 12" src="https://github.com/user-attachments/assets/5e649498-2c5f-4daa-a253-d78d3e39d331" />
+
+
+# Alerts Page
+<img width="1470" height="796" alt="Screenshot 2026-06-18 at 07 45 48" src="https://github.com/user-attachments/assets/fdbbcea2-cc06-46fb-a7a8-4778ba9ba864" />
+
 
 ## Author
 
